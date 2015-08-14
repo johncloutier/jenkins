@@ -17,7 +17,7 @@ RUN curl -O http://s3.amazonaws.com/ec2-downloads/ec2-api-tools.zip
 RUN unzip ec2-api-tools.zip -d /usr/local/ec2
 RUN rm ec2-api-tools.zip
 RUN ln -s ec2/ec2* ec2-api-tools
-RUN curl -L https://github.com/docker/compose/releases/download/1.3.3/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose --allow-root
+RUN curl -L https://github.com/docker/compose/releases/download/1.3.3/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose 
 RUN chmod +x /usr/local/bin/docker-compose
 ENV EC2_HOME /usr/local/ec2-api-tools
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
