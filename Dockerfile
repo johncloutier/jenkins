@@ -22,11 +22,17 @@ RUN chmod +x /usr/local/bin/docker-compose
 ENV EC2_HOME /usr/local/ec2-api-tools
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 
-COPY plugins.sh /usr/local/bin/plugins.sh
-RUN chmod +x /usr/local/bin/plugins.sh
+RUN mkdir /usr/local/jenkins
+WORKDIR /usr/local/jenkins
+ADD jobs/ ./jobs
+ADD plugins.* ./
+RUN chmod +x plugins.sh
+RUN ./plugins.sh plugins.txt
+#RUN cp -r plugins/ /usr/share/jenkins/ref/
+#ADD plugins /usr/share/jenkins/ref/plugins/
 
 USER jenkins
 
-ADD plugins /usr/share/jenkins/ref/plugins/
+COPY groovy/*.groovy /usr/share/jenkins/ref/init.groovy.d/
 
 ENTRYPOINT ["/usr/local/bin/jenkins.sh"]

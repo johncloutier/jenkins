@@ -1,31 +1,67 @@
-#! /bin/bash
-export SHELL=/bin/sh
-
-# Parse a support-core plugin -style txt file as specification for jenkins plugins to be installed
-# in the reference directory, so user can define a derived Docker image with just :
-#
-# FROM jenkins
-# COPY plugins.txt /plugins.txt
-# RUN /usr/local/bin/plugins.sh /plugins.txt
-#
+#!/bin/bash
 
 set -e
 
-declare -a cmds
-declare -i cmd_ctr=0
+if [ $# -eq 0 ]; then
+  echo "USAGE: $0 plugin_file"
+  exit 1
+fi
 
-REF=plugins
-JENKINS_UC_DOWNLOAD=https://updates.jenkins-ci.org/download
-mkdir -p $REF
+plugin_dir=/usr/share/jenkins/ref/plugins
+file_owner=jenkins.jenkins
 
+mkdir -p "$plugin_dir" 
 
-while read spec || [ -n "$spec" ]; do
-    plugin=(${spec//:/ });
-    [[ ${plugin[0]} =~ ^# ]] && continue
-    [[ ${plugin[0]} =~ ^\s*$ ]] && continue
-    [[ -z ${plugin[1]} ]] && plugin[1]="latest"
-    cmds[$cmd_ctr]="curl -L -f ${JENKINS_UC_DOWNLOAD}/plugins/${plugin[0]}/${plugin[1]}/${plugin[0]}.hpi -o $REF/${plugin[0]}.jpi"
-    cmd_ctr=$[cmd_ctr + 1]
-done  < $1
+installPlugin() {
+  if [ -f ${plugin_dir}/${1}.hpi -o -f ${plugin_dir}/${1}.jpi ]; then
+    if [ "$2" == "1" ]; then
+      return 1
+    fi
+    echo "Skipped: $1 (already installed)"
+    return 0
+  else
+    echo "Installing: $1"
+    curl -L  --silent --output ${plugin_dir}/${1}.hpi  https://updates.jenkins-ci.org/latest/${1}.hpi
+    return 0
+  fi
+}
 
-parallel -j 0 --eta ::: "${cmds[@]}"
+index=0
+
+while read line ; do
+  plugins[$index]="$line"
+  index=$(($index+1))
+done < $*
+
+for plugin in "${plugins[@]}"
+do
+  installPlugin "$plugin"
+done
+
+changed=1
+maxloops=100
+
+while [ "$changed"  == "1" ]; do
+  echo "Check for missing dependecies ..."
+  if  [ $maxloops -lt 1 ] ; then
+    echo "Max loop count reached - probably a bug in this script: $0"
+    exit 1
+  fi
+  ((maxloops--))
+  changed=0
+  for f in ${plugin_dir}/*.hpi ; do
+    # without optionals
+    #deps=$( unzip -p ${f} META-INF/MANIFEST.MF | tr -d '\r' | sed -e ':a;N;$!ba;s/\n //g' | grep -e "^Plugin-Dependencies: " | awk '{ print $2 }' | tr ',' '\n' | grep -v "resolution:=optional" | awk -F ':' '{ print $1 }' | tr '\n' ' ' )
+    # with optionals
+    deps=$( unzip -p ${f} META-INF/MANIFEST.MF | tr -d '\r' | sed -e ':a;N;$!ba;s/\n //g' | grep -e "^Plugin-Dependencies: " | awk '{ print $2 }' | tr ',' '\n' | awk -F ':' '{ print $1 }' | tr '\n' ' ' )
+    for plugin in $deps; do
+      installPlugin "$plugin" 1 && changed=1
+    done
+  done
+done
+
+echo "fixing permissions"
+
+chown ${file_owner} ${plugin_dir} -R
+
+echo "all done"
