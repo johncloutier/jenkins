@@ -1,10 +1,10 @@
 import jenkins.model.*
 import groovy.io.FileType
 
-def jobName = "MyProject"
-String configXml = new File('/usr/local/jenkins/jobs/myproject.xml').text
-def xmlStream = new ByteArrayInputStream(configXml.getBytes())
-Jenkins.instance.createProjectFromXML(jobName, xmlStream)
+//def jobName = "MyProject"
+//String configXml = new File('/usr/local/jenkins/jobs/myproject.xml').text
+//def xmlStream = new ByteArrayInputStream(configXml.getBytes())
+//Jenkins.instance.createProjectFromXML(jobName, xmlStream)
 
 def jobs = []
 

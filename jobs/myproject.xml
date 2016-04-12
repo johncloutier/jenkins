@@ -1,0 +1,107 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project>
+    <actions/>
+    <description></description>
+    <logRotator class="hudson.tasks.LogRotator">
+        <daysToKeep>-1</daysToKeep>
+        <numToKeep>-1</numToKeep>
+        <artifactDaysToKeep>-1</artifactDaysToKeep>
+        <artifactNumToKeep>-1</artifactNumToKeep>
+    </logRotator>
+    <keepDependencies>false</keepDependencies>
+    <properties>
+        <com.coravy.hudson.plugins.github.GithubProjectProperty plugin="github@1.11.3">
+            <projectUrl>https://github.com/johncloutier/johncat/</projectUrl>
+        </com.coravy.hudson.plugins.github.GithubProjectProperty>
+        <hudson.model.ParametersDefinitionProperty>
+            <parameterDefinitions>
+                <hudson.model.TextParameterDefinition>
+                    <name>DOCKER_TLS_VERIFY</name>
+                    <description></description>
+                    <defaultValue>1</defaultValue>
+                </hudson.model.TextParameterDefinition>
+                <hudson.model.TextParameterDefinition>
+                    <name>DOCKER_HOST</name>
+                    <description></description>
+                    <defaultValue>tcp://xx.xx.xx,xx:2376</defaultValue>
+                </hudson.model.TextParameterDefinition>
+                <hudson.model.TextParameterDefinition>
+                    <name>DOCKER_CERT_PATH</name>
+                    <description></description>
+                    <defaultValue>/opt/docker/machine/machines/docker-host</defaultValue>
+                </hudson.model.TextParameterDefinition>
+                <hudson.model.TextParameterDefinition>
+                    <name>DOCKER_MACHINE_NAME</name>
+                    <description></description>
+                    <defaultValue>docker-host</defaultValue>
+                </hudson.model.TextParameterDefinition>
+                <hudson.model.TextParameterDefinition>
+                    <name>DOCKER_REGISTRY_URI</name>
+                    <description></description>
+                    <defaultValue>xx.xx.xx.xx:5000</defaultValue>
+                </hudson.model.TextParameterDefinition>
+                <hudson.model.TextParameterDefinition>
+                    <name>ES_AWS_ACCESS_KEY_ID</name>
+                    <description></description>
+                    <defaultValue>XXXXXXXXXXXXXXXX</defaultValue>
+                </hudson.model.TextParameterDefinition>
+                <hudson.model.TextParameterDefinition>
+                    <name>ES_AWS_SECRET_ACCESS_KEY</name>
+                    <description></description>
+                    <defaultValue>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</defaultValue>
+                </hudson.model.TextParameterDefinition>
+            </parameterDefinitions>
+        </hudson.model.ParametersDefinitionProperty>
+    </properties>
+    <scm class="hudson.plugins.git.GitSCM" plugin="git@2.3.5">
+        <configVersion>2</configVersion>
+        <userRemoteConfigs>
+            <hudson.plugins.git.UserRemoteConfig>
+                <url>https://github.com/team/myproject.git</url>
+            </hudson.plugins.git.UserRemoteConfig>
+        </userRemoteConfigs>
+        <branches>
+            <hudson.plugins.git.BranchSpec>
+                <name>*/master</name>
+            </hudson.plugins.git.BranchSpec>
+        </branches>
+        <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+        <submoduleCfg class="list"/>
+        <extensions/>
+    </scm>
+    <canRoam>true</canRoam>
+    <disabled>false</disabled>
+    <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+    <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+    <triggers>
+        <com.cloudbees.jenkins.GitHubPushTrigger plugin="github@1.11.3">
+            <spec></spec>
+        </com.cloudbees.jenkins.GitHubPushTrigger>
+    </triggers>
+    <concurrentBuild>false</concurrentBuild>
+    <builders>
+        <com.cloudbees.jenkins.GitHubSetCommitStatusBuilder plugin="github@1.11.3"/>
+        <hudson.tasks.Shell>
+            <command># Build and push
+                docker build -t $DOCKER_REGISTRY_URI/team/project:latest .
+                docker push $DOCKER_REGISTRY_URI/team/project:latest</command>
+        </hudson.tasks.Shell>
+        <hudson.tasks.Shell>
+            <command># Pull down infrastructure
+                export PATH=$PATH:/tmp
+
+                docker-compose stop
+                docker-compose rm -f
+
+                # clean up
+                docker rm -v $(docker ps -a -q -f status=exited) || true
+                docker rmi $(docker images -f &quot;dangling=true&quot; -q) || true
+                docker run -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/docker:/var/lib/docker --rm martin/docker-cleanup-volumes
+
+                # Stand up infrastructure
+                docker-compose up -d</command>
+        </hudson.tasks.Shell>
+    </builders>
+    <publishers/>
+    <buildWrappers/>
+</project>
