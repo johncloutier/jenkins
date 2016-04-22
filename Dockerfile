@@ -11,6 +11,13 @@ RUN npm install -g bower grunt-cli npm-cache
 RUN gem install sass
 RUN gem install compass
 
+RUN wget --no-verbose -O /tmp/apache-maven-3.2.2.tar.gz http://archive.apache.org/dist/maven/maven-3/3.2.2/binaries/apache-maven-3.2.2-bin.tar.gz
+RUN tar xzf /tmp/apache-maven-3.2.2.tar.gz -C /opt/
+RUN ln -s /opt/apache-maven-3.2.2 /opt/maven
+RUN ln -s /opt/maven/bin/mvn /usr/local/bin
+RUN rm -f /tmp/apache-maven-3.2.2.tar.gz
+ENV MAVEN_HOME /opt/maven
+
 WORKDIR /usr/local
 RUN mkdir /usr/local/ec2
 RUN curl -O http://s3.amazonaws.com/ec2-downloads/ec2-api-tools.zip
@@ -32,6 +39,8 @@ RUN ./plugins.sh plugins.txt
 #ADD plugins /usr/share/jenkins/ref/plugins/
 
 USER jenkins
+
+RUN mkdir /var/jenkins_home/workspace
 
 COPY groovy/*.groovy /usr/share/jenkins/ref/init.groovy.d/
 
