@@ -45,3 +45,5 @@ async-http-client
 docker-build-step
 template-project
 filesystem_scm
+wildfly-deployer
+email-ext
